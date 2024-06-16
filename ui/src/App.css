@@ -1,0 +1,13 @@
+.App {
+  text-align: center;
+}
+
+.noclip-ui {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+}
