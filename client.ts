@@ -59,7 +59,7 @@ setTick(() => {
 
 setTick(() => {
     if (IsControlJustReleased(0, 249)) {
-        emitNet("checkNoclipPermission");
+        emitNet("checkNoclipPermission", global.source);
         noclip_started = true;
     }
 
