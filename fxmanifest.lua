@@ -9,10 +9,10 @@ client_scripts {
     'client.lua'
 }
 
-ui_page 'noclip_ui/index.html'
+ui_page 'ui/build/index.html'
 
 files {
-    'noclip_ui/index.html',
-    'noclip_ui/static/js/*.js',
-    'noclip_ui/static/css/*.css'
+    'ui/build/index.html',
+    'ui/build/static/js/*.js',
+    'ui/build/static/css/*.css'
 }
