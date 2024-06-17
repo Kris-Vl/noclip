@@ -2,11 +2,11 @@ fx_version 'bodacious'
 game 'gta5'
 
 server_scripts {
-    'server.lua'
+    'server.ts'
 }
 
 client_scripts {
-    'client.lua'
+    'client.ts'
 }
 
 ui_page 'ui/build/index.html'
