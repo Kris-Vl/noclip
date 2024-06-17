@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+      "target": "es2022",
+      "removeComments": false,
+      "outDir": "javascript",
+      "noEmitOnError": true,
+      "module": "commonjs",
+      "strict": true,
+      "esModuleInterop": true,
+      "forceConsistentCasingInFileNames": true,
+      "skipLibCheck": true
+    },
+    "include": [
+      "client.ts",
+      "server.ts",
+      "fivem.d.ts"
+    ]
+  }
