@@ -1,19 +1,48 @@
 local noclip = false
 local noclip_speed = 1.0
+local noclip_started = false
+
+function getPosition()
+    local x, y, z = table.unpack(GetEntityCoords(GetPlayerPed(-1), true))
+    return x, y, z
+end
+
+function getCamDirection()
+    local heading = GetGameplayCamRelativeHeading() + GetEntityHeading(GetPlayerPed(-1))
+    local pitch = GetGameplayCamRelativePitch()
+
+    local x = -math.sin(heading * math.pi / 180.0)
+    local y = math.cos(heading * math.pi / 180.0)
+    local z = math.sin(pitch * math.pi / 180.0)
+
+    local len = math.sqrt(x * x + y * y + z * z)
+    if len ~= 0 then
+        x = x / len
+        y = y / len
+        z = z / len
+    end
+
+    return x, y, z
+end
+
+function isNoclip()
+    return noclip
+end
 
 RegisterNetEvent("noclip:allowed")
-AddEventHandler("noclip:allowed", function()
-    noclip = not noclip
-    if noclip then
-        TriggerEvent("chat:addMessage", { args = { "Noclip enabled" } })
-    else
-        TriggerEvent("chat:addMessage", { args = { "Noclip disabled" } })
+AddEventHandler("noclip:allowed", function(allowed)
+    noclip = allowed
+    if noclip_started then
+        if noclip then
+            TriggerEvent("chat:addMessage", { args = { "Noclip enabled. Press N to toggle noclip mode or press B to disable noclip." } })
+        else
+            TriggerEvent("chat:addMessage", { args = { "Noclip disabled" } })
+        end
     end
     SendNUIMessage({
         type = "toggleNoclip",
         status = noclip,
-        speed = 0.0,
-        instructions = "Use W, A, S, D to move, Q to go up, E to go down"
+        speed = noclip_speed
     })
 end)
 
@@ -22,89 +51,82 @@ AddEventHandler("noclip:denied", function()
     TriggerEvent("chat:addMessage", { args = { "You do not have permission to use noclip" } })
 end)
 
-local previousCoords = GetEntityCoords(PlayerPedId(), true)
-local currentCoords = previousCoords
-local lastCheck = GetGameTimer()
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(100)
+        if noclip then
+            local speed = noclip_speed
+            if IsControlPressed(0, 21) then
+                speed = 3.0
+            else
+                speed = 1.5
+            end
+            SendNUIMessage({
+                type = "updateSpeed",
+                speed = speed
+            })
+        end
+    end
+end)
 
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
 
-        if IsControlJustReleased(0, 289) then
-            TriggerServerEvent("checkPermission")
+        if IsControlJustReleased(0, 249) then -- 249 is the control code for N key
+            TriggerServerEvent("checkNoclipPermission")
+            noclip_started = true
         end
-        
-        if IsControlJustReleased(0, 249) and noclip ~= nil then
-            noclip = not noclip
-            if noclip then
-                TriggerEvent("chat:addMessage", { args = { "Noclip enabled" } })
-            else
-                TriggerEvent("chat:addMessage", { args = { "Noclip disabled" } })
-            end
-            SendNUIMessage({
-                type = "toggleNoclip",
-                status = noclip,
-                speed = 0.0,
-                instructions = noclip and "Use W, A, S, D to move, Q to go up, E to go down" or ""
-            })
+
+        if IsControlJustReleased(0, 305) then -- 305 is the control code for B key
+            noclip = false
+            TriggerEvent("chat:addMessage", { args = { "Noclip disabled" } })
         end
 
         if noclip then
-            local playerPed = PlayerPedId()
-            local x, y, z = table.unpack(GetEntityCoords(playerPed, true))
-            local dx, dy, dz = 0.0, 0.0, 0.0
+            local ped = GetPlayerPed(-1)
+            local x, y, z = getPosition()
+            local dx, dy, dz = getCamDirection()
+            local speed = noclip_speed
+
+            SetEntityVisible(GetPlayerPed(-1), false, 0)
+            SetEntityVelocity(ped, 0.0001, 0.0001, 0.0001)
 
             if IsControlPressed(0, 32) then -- W
-                dx = dx + noclip_speed
+                x = x + speed * dx
+                y = y + speed * dy
+                z = z + speed * dz
             end
+
             if IsControlPressed(0, 33) then -- S
-                dx = dx - noclip_speed
+                x = x - speed * dx
+                y = y - speed * dy
+                z = z - speed * dz
             end
+
             if IsControlPressed(0, 34) then -- A
-                dy = dy + noclip_speed
+                x = x - 1
             end
+
             if IsControlPressed(0, 35) then -- D
-                dy = dy - noclip_speed
+                x = x + 1
             end
+
             if IsControlPressed(0, 44) then -- Q
-                dz = dz + noclip_speed
+                z = z + 1
             end
+
             if IsControlPressed(0, 38) then -- E
-                dz = dz - noclip_speed
+                z = z - 1
             end
 
-            local heading = GetEntityHeading(playerPed)
-            local radHeading = math.rad(heading)
-            local cosH = math.cos(radHeading)
-            local sinH = math.sin(radHeading)
-
-            x = x + dx * cosH - dy * sinH
-            y = y + dx * sinH + dy * cosH
-            z = z + dz
-
-            SetEntityCoordsNoOffset(playerPed, x, y, z, true, true, true)
-            SetEntityCollision(playerPed, false, false)
-            FreezeEntityPosition(playerPed, true)
+            SetEntityCoordsNoOffset(ped, x, y, z, true, true, true)
+            SetEntityCollision(ped, false, false)
+            FreezeEntityPosition(ped, true)
         else
             local playerPed = PlayerPedId()
             SetEntityCollision(playerPed, true, true)
             FreezeEntityPosition(playerPed, false)
         end
-        
-        currentCoords = GetEntityCoords(PlayerPedId(), true)
-        local currentTime = GetGameTimer()
-        local deltaTime = (currentTime - lastCheck) / 1000
-        lastCheck = currentTime
-        
-        local velocity = Vdist(previousCoords.x, previousCoords.y, previousCoords.z, currentCoords.x, currentCoords.y, currentCoords.z) / deltaTime
-        local speed = math.floor(velocity * 100 + 0.5) / 100
-        
-        -- Send NUI message to update UI
-        SendNUIMessage({
-            type = "updateSpeed",
-            speed = speed
-        })
-
-        previousCoords = currentCoords
     end
 end)
